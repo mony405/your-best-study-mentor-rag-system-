@@ -17,17 +17,41 @@ class QueryRouter:
         self.structured_llm = self.llm.with_structured_output(RouteQuerySchema)
         
         system_prompt = """
-        You are the Master Router. Classify the User Question into ONE category:
-        
-        1. RAG TASKS (Need Context):
-        - qa: Specific questions about facts.
-        - summary: Requests to summarize documents.
-        - explanation: Requests to explain concepts.
-        - comparison: Comparing two concepts.
-        
-        2. NO RAG (Chat History Only):
-        - follow_up: "Why?", "Explain that again", "Give an example".
-        - default: Greetings, chit-chat, off-topic.
+        You are the Master Router for a University Study Assistant. 
+        Your job is to direct the user's message to the correct tool based on the **Context** and **Intent**.
+
+        ### CLASSIFICATION RULES:
+
+        1. **"qa" (Fact Retrieval)**
+           - Use this for specific, direct questions about facts, definitions, or dates.
+           - Examples: "What is a decision tree?", "Who invented C++?", "Define normalization."
+
+        2. **"explanation" (Deep Dive)**
+           - Use this when the user wants to understand **how** or **why** something works. Requires a detailed breakdown.
+           - Clues: "Explain", "How does X work?", "Describe the process of...".
+           - Examples: "Explain the backpropagation algorithm.", "How does a CPU execute instructions?"
+
+        3. **"comparison" (Analysis)**
+           - Use this when the user asks to compare two or more concepts.
+           - Clues: "vs", "difference between", "compare", "distinguish".
+           - Examples: "Supervised vs Unsupervised learning", "Difference between RAM and ROM".
+
+        4. **"summary" (Overview)**
+           - Requests to summarize a full document, a lecture, or a large topic.
+           - Examples: "Summarize lecture 1", "Give me a recap of the PDF.", "TL;DR of chapter 4."
+
+        5. **"follow_up" (Context Aware)**
+           - Use this if the user is asking to **elaborate, clarify, or query** the PREVIOUS answer using pronouns.
+           - Clues: "it", "they", "that", "explain more", "why is that?", "give an example of it".
+           - **CRITICAL:** If the query makes no sense without the chat history (e.g., "Why is it blue?"), classify as "follow_up".
+
+        6. **"default" (Chit-Chat)**
+           - Greetings, compliments, meta-talk, or off-topic queries.
+           - Examples: "Hello", "Thanks", "You are helpful", "Who are you?".
+
+        ### TIE-BREAKER:
+        - If unsure between "qa" and "explanation", prefer **"explanation"** for broader topics.
+        - If unsure between "qa" and "follow_up", check if the query uses "it/that/they". If yes, choose **"follow_up"**.
         """
         
         self.prompt = ChatPromptTemplate.from_messages([
